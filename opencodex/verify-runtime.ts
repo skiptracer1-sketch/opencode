@@ -70,6 +70,7 @@ async function browser(args: string[]) {
     child.exited,
   ])
   clearTimeout(timeout)
+  assert(stdout.trim(), `Browser command ${args[0]} returned no result: ${redact(stderr)}`)
   const result = JSON.parse(stdout)
   browserLog.push({ command: args[0], response: JSON.parse(redact(JSON.stringify(result))), stderr: redact(stderr) })
   assert.equal(code, 0, `Browser command ${args[0]} failed: ${redact(stderr || stdout)}`)
@@ -97,7 +98,7 @@ try {
     passed(`native ${args[0]}`)
   }
 
-  // Port zero lets the operating system choose a free port without a reservation race.
+  // OpenCode tries its default port first, then asks the OS for a free port.
   state.server = Bun.spawn([binary, "serve", "--hostname", "127.0.0.1", "--port", "0"], {
     cwd: project,
     env,
@@ -194,6 +195,19 @@ try {
 } catch (error) {
   state.error = redact(error instanceof Error ? error.stack || error.message : String(error))
   console.error(state.error)
+  if (state.browser) {
+    for (const args of [
+      ["snapshot"],
+      ["errors"],
+      ["console"],
+      ["network", "requests"],
+      ["screenshot", path.join(output, "failure.png")],
+    ]) {
+      await browser(args)
+        .then((data) => console.error(redact(JSON.stringify({ diagnostic: args[0], data }))))
+        .catch(() => {})
+    }
+  }
   process.exitCode = 1
 } finally {
   if (state.browser) await browser(["close"]).catch(() => {})
