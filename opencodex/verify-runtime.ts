@@ -55,6 +55,12 @@ const redact = (value: string) => value.replaceAll(password, "[REDACTED]").repla
 
 async function browser(args: string[]) {
   state.browser = true
+  console.log(`BROWSER ${args[0]}`)
+  // A Windows daemon can inherit pipe handles after its CLI exits. Capture to
+  // files so waiting for the CLI never waits for the daemon to close stdout.
+  const capture = path.join(temporary, `browser-${randomUUID()}`)
+  const stdoutFile = Bun.file(`${capture}.stdout`)
+  const stderrFile = Bun.file(`${capture}.stderr`)
   const child = Bun.spawn(
     [
       process.env.OPENCODEX_BROWSER_BIN || "agent-browser",
@@ -67,17 +73,14 @@ async function browser(args: string[]) {
     ],
     {
       cwd: project,
-      stdout: "pipe",
-      stderr: "pipe",
+      stdout: stdoutFile,
+      stderr: stderrFile,
     },
   )
   const timeout = setTimeout(() => child.kill(), 45_000)
-  const [stdout, stderr, code] = await Promise.all([
-    new Response(child.stdout).text(),
-    new Response(child.stderr).text(),
-    child.exited,
-  ])
+  const code = await child.exited
   clearTimeout(timeout)
+  const [stdout, stderr] = await Promise.all([stdoutFile.text(), stderrFile.text()])
   assert(stdout.trim(), `Browser command ${args[0]} returned no result: ${redact(stderr)}`)
   const result = JSON.parse(stdout)
   browserLog.push({ command: args[0], response: JSON.parse(redact(JSON.stringify(result))), stderr: redact(stderr) })
