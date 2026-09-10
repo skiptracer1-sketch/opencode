@@ -9,7 +9,7 @@ Extract the complete archive first.
 - **Windows x64:** double-click `Start-OpenCodex.cmd`.
 - **Linux x64:** run `./start-opencodex.sh`.
 
-The browser opens on `http://127.0.0.1:4096`. Enter the username and random password printed in the launcher window. Keep that window open while you work. Choose **Open project**, select a folder, connect a model, and enter your coding task. Work runs on the computer hosting OpenCodex.
+The browser opens on `http://127.0.0.1:4096`. Enter the username and random password printed in the launcher window. Keep that window open while you work. Choose **Add project** (or **Open project** in the older layout), select a folder, start a new session, connect a model, and enter your coding task. Work runs on the computer hosting OpenCodex.
 
 OpenCodex itself has no subscription fee. Model providers have their own prices and usage limits. Existing provider credentials remain in OpenCode's local credential store and are never bundled in this distribution.
 
@@ -66,7 +66,7 @@ bun typecheck
 
 The build script also runs `--version` for native targets. Cross compilation alone does not verify Windows runtime behavior. Consult the included build report for the exact checks performed on this release.
 
-The `OpenCodex native verification` GitHub Actions workflow builds on Windows and Linux hosts, checks password protection, loads the embedded UI in Chromium, and opens a synthetic project through the directory picker. It saves screenshots and a runtime report; a distribution artifact is uploaded only after those checks pass. No model inference or provider credentials are used. The browser test covers the served workspace, not the operating system's double-click browser launch.
+The `OpenCodex native verification` GitHub Actions workflow compiles both executables on Linux, then runs each executable on its matching Windows or Linux host. It checks password protection, loads the embedded UI in Chromium, and opens a synthetic project through the directory picker. It saves screenshots and a runtime report; a distribution artifact is uploaded only after those checks pass. An intermediate artifact named `OpenCodex-unverified-test-inputs` transfers the binaries between jobs and is not a verified release. No model inference or provider credentials are used. The browser test covers the served workspace, not the operating system's double-click browser launch.
 
 To run the same check after a native build, install `agent-browser@0.37.1` and its browser (`agent-browser install`), then run from `packages/opencode`:
 

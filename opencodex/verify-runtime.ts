@@ -56,7 +56,15 @@ const redact = (value: string) => value.replaceAll(password, "[REDACTED]").repla
 async function browser(args: string[]) {
   state.browser = true
   const child = Bun.spawn(
-    ["agent-browser", "--session", browserSession, "--allowed-domains", "127.0.0.1", "--json", ...args],
+    [
+      process.env.OPENCODEX_BROWSER_BIN || "agent-browser",
+      "--session",
+      browserSession,
+      "--allowed-domains",
+      "127.0.0.1",
+      "--json",
+      ...args,
+    ],
     {
       cwd: project,
       stdout: "pipe",
@@ -154,14 +162,14 @@ try {
   await browser([
     "wait",
     "--fn",
-    "document.title === 'OpenCodex' && [...document.querySelectorAll('button')].some(x => x.textContent.trim() === 'Open project' && !x.disabled)",
+    "document.title === 'OpenCodex' && [...document.querySelectorAll('button')].some(x => /^(Add|Open) project$/.test(x.getAttribute('aria-label') || x.textContent.trim()) && !x.disabled)",
   ])
   const home = await browser(["snapshot", "-i"])
   assert.equal(typeof home.snapshot, "string")
-  const open = home.snapshot.match(/button "Open project" \[ref=(e\d+)\]/)
-  assert(open, "The rendered home must contain an Open project button")
+  const open = home.snapshot.match(/button "(?:Add|Open) project" \[ref=(e\d+)\]/)
+  assert(open, "The rendered home must contain an Add project or Open project button")
   await browser(["screenshot", path.join(output, "desktop.png")])
-  passed("desktop interface renders and enables Open project")
+  passed("desktop interface renders and enables the project picker")
   await browser(["click", `@${open[1]}`])
   await browser(["wait", "[role=dialog]"])
   const dialog = await browser(["snapshot", "-i"])
@@ -171,15 +179,20 @@ try {
   await browser(["wait", folderSelector])
   await browser(["screenshot", path.join(output, "project-picker.png")])
   await browser(["click", folderSelector])
-  await browser(["wait", "--fn", "location.pathname !== '/' && !document.querySelector('[role=dialog]')"])
-  await browser(["snapshot", "-i"])
-  passed("project picker finds and opens the synthetic project")
+  await browser([
+    "wait",
+    "--fn",
+    "!document.querySelector('[role=dialog]') && document.body.innerText.includes('sample-project')",
+  ])
+  const selected = await browser(["snapshot", "-i"])
+  assert.match(selected.snapshot, /sample-project/)
+  passed("project picker finds and adds the synthetic project")
   await browser(["open", origin])
   await browser(["set", "viewport", "390", "844"])
   await browser([
     "wait",
     "--fn",
-    "document.body.innerText.includes('OpenCodex') && [...document.querySelectorAll('button')].some(x => x.textContent.trim() === 'Open project' && !x.disabled)",
+    "document.body.innerText.includes('OpenCodex') && [...document.querySelectorAll('button')].some(x => /^(Add|Open) project$/.test(x.getAttribute('aria-label') || x.textContent.trim()) && !x.disabled)",
   ])
   await browser(["screenshot", path.join(output, "mobile.png")])
   passed("interface renders at a mobile viewport")
