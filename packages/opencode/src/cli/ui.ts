@@ -46,6 +46,9 @@ export function empty() {
 }
 
 export function logo(pad?: string) {
+  if (process.env.OPENCODE_DISTRIBUTION === "opencodex") {
+    return `${pad ?? ""}OpenCodex${EOL}${pad ?? ""}Built on OpenCode · MIT licensed`
+  }
   if (!process.stdout.isTTY && !process.stderr.isTTY) {
     const result = []
     for (const row of wordmark) {

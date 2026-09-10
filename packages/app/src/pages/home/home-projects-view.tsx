@@ -78,6 +78,10 @@ export function HomeProjectsView(props: HomeProjectsViewProps) {
         props.onWheel(event)
       }}
     >
+      <div class="flex flex-col gap-1 px-1.5 pb-2">
+        <div class="text-20-medium text-v2-text-text-strong">{props.language.t("opencodex.name")}</div>
+        <div class="text-12-regular text-v2-text-text-muted">{props.language.t("opencodex.attribution")}</div>
+      </div>
       <div class="flex h-7 min-w-0 shrink-0 items-center justify-between pl-1.5 pr-3">
         <div class="text-v2-text-text-muted [font-weight:530]">{props.language.t("home.projects")}</div>
         <Show

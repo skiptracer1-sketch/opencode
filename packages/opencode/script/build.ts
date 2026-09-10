@@ -17,6 +17,8 @@ import { Script } from "@opencode-ai/script"
 import pkg from "../package.json"
 
 const singleFlag = process.argv.includes("--single")
+const opencodexFlag = process.argv.includes("--opencodex")
+const targetFlag = process.argv.find((arg) => arg.startsWith("--target="))?.slice("--target=".length)
 const baselineFlag = process.argv.includes("--baseline")
 const skipInstall = process.argv.includes("--skip-install")
 const sourcemapsFlag = process.argv.includes("--sourcemaps")
@@ -134,6 +136,20 @@ const targets = singleFlag
     })
   : allTargets
 
+const targetNames = targetFlag ? new Set(targetFlag.split(",")) : undefined
+const selectedTargets = targetNames
+  ? targets.filter((item) =>
+      targetNames.has(
+        [item.os === "win32" ? "windows" : item.os, item.arch, item.avx2 === false ? "baseline" : undefined, item.abi]
+          .filter(Boolean)
+          .join("-"),
+      ),
+    )
+  : targets
+if (!selectedTargets.length || (targetNames && selectedTargets.length !== targetNames.size)) {
+  throw new Error(`Unknown or incompatible build target: ${targetFlag}`)
+}
+
 await $`rm -rf dist`
 
 const binaries: Record<string, string> = {}
@@ -142,7 +158,7 @@ if (!skipInstall) {
   await $`bun install --os="*" --cpu="*" @parcel/watcher@${pkg.dependencies["@parcel/watcher"]}`
   await $`bun install --os="*" --cpu="*" @ff-labs/fff-bun@${pkg.dependencies["@ff-labs/fff-bun"]}`
 }
-for (const item of targets) {
+for (const item of selectedTargets) {
   const name = [
     pkg.name,
     // changing to win32 flags npm for some reason
@@ -175,7 +191,7 @@ for (const item of targets) {
       autoloadTsconfig: true,
       autoloadPackageJson: true,
       target: name.replace(pkg.name, "bun") as any,
-      outfile: `dist/${name}/bin/opencode`,
+      outfile: `dist/${name}/bin/${opencodexFlag ? "opencodex" : "opencode"}`,
       execArgv: [`--user-agent=opencode/${Script.version}`, "--use-system-ca", "--"],
       windows: {},
     },
@@ -184,7 +200,7 @@ for (const item of targets) {
       ...(embeddedFileMap ? { "opencode-web-ui.gen.ts": embeddedFileMap } : {}),
     },
     entrypoints: [
-      "./src/index.ts",
+      opencodexFlag ? "./src/opencodex.ts" : "./src/index.ts",
       workerPath,
       treeSitterWorkerPath,
       ...(embeddedFileMap ? ["opencode-web-ui.gen.ts"] : []),
@@ -203,7 +219,7 @@ for (const item of targets) {
 
   // Smoke test: only run if binary is for current platform
   if (item.os === process.platform && item.arch === process.arch && !item.abi) {
-    const binaryPath = `dist/${name}/bin/opencode`
+    const binaryPath = `dist/${name}/bin/${opencodexFlag ? "opencodex" : "opencode"}`
     console.log(`Running smoke test: ${binaryPath} --version`)
     try {
       const versionOutput = await $`${binaryPath} --version`.text()

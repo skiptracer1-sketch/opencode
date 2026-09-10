@@ -2,6 +2,8 @@ import { DESKTOP_NATIVE_ENGLISH } from "./desktop-native"
 
 export const dict = {
   ...DESKTOP_NATIVE_ENGLISH,
+  "opencodex.name": "OpenCodex",
+  "opencodex.attribution": "Built on OpenCode",
   "command.category.suggested": "Suggested",
   "command.category.view": "View",
   "command.category.project": "Project",
