@@ -2,7 +2,7 @@
 
 import assert from "node:assert/strict"
 import { randomUUID } from "node:crypto"
-import { mkdir, mkdtemp, rm } from "node:fs/promises"
+import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 
@@ -20,7 +20,7 @@ const binary = path.join(
   process.platform === "win32" ? "opencodex.exe" : "opencodex",
 )
 const output = path.join(import.meta.dirname, "verification")
-const temporary = await mkdtemp(path.join(os.tmpdir(), "opencodex-runtime-"))
+const temporary = await realpath(await mkdtemp(path.join(os.tmpdir(), "opencodex-runtime-")))
 const project = path.join(temporary, "sample-project")
 await mkdir(project)
 await mkdir(output, { recursive: true })
