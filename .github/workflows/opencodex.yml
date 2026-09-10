@@ -1,0 +1,111 @@
+name: OpenCodex native verification
+
+on:
+  push:
+    branches: [opencodex-build]
+    paths:
+      - "packages/**"
+      - "opencodex/**"
+      - "!opencodex/BUILD-REPORT.md"
+      - "!opencodex/README.md"
+      - ".github/workflows/opencodex.yml"
+      - ".github/actions/setup-bun/**"
+      - "package.json"
+      - "bun.lock"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: opencodex-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+  OPENCODE_VERSION: 1.18.30-opencodex.1
+  OPENCODE_CHANNEL: opencodex
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  native:
+    name: ${{ matrix.label }} x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: linux-x64
+            label: Linux
+            executable: opencodex
+          - runner: windows-2025
+            target: windows-x64
+            label: Windows
+            executable: opencodex.exe
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+        with:
+          install-flags: --frozen-lockfile
+      - name: Install browser verification tool
+        run: npm install --global agent-browser@0.37.1
+      - name: Install Chromium on Linux
+        if: runner.os == 'Linux'
+        run: agent-browser install --with-deps
+      - name: Install Chromium on Windows
+        if: runner.os == 'Windows'
+        run: agent-browser install
+      - name: Verify launcher behavior
+        working-directory: packages/opencode
+        run: bun test test/cli/opencodex.test.ts
+      - name: Build native OpenCodex with embedded UI
+        run: bun run packages/opencode/script/build.ts --single --opencodex --skip-install
+      - name: Verify executable and browser workspace
+        working-directory: packages/opencode
+        run: bun run ../../opencodex/verify-runtime.ts
+      - name: Stage the verified distribution
+        shell: bash
+        run: |
+          bundle="opencodex/verification/OpenCodex-${{ matrix.label }}-x64"
+          mkdir -p "$bundle"
+          cp "packages/opencode/dist/opencode-${{ matrix.target }}/bin/${{ matrix.executable }}" "$bundle/"
+          cp opencodex/README.md opencodex/BUILD-REPORT.md LICENSE "$bundle/"
+          cp opencodex/verification/report.json "$bundle/RUNTIME-REPORT.json"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cp opencodex/Start-OpenCodex.cmd "$bundle/"
+          else
+            cp opencodex/start-opencodex.sh "$bundle/"
+            chmod +x "$bundle/opencodex" "$bundle/start-opencodex.sh"
+          fi
+      - name: Package Windows distribution
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Compress-Archive -Path opencodex/verification/OpenCodex-Windows-x64 -DestinationPath opencodex/verification/OpenCodex-Windows-x64.zip
+      - name: Package Linux distribution
+        if: runner.os == 'Linux'
+        run: tar -czf opencodex/verification/OpenCodex-Linux-x64.tar.gz -C opencodex/verification OpenCodex-Linux-x64
+      - name: Upload verified distribution
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: OpenCodex-${{ matrix.label }}-x64
+          path: |
+            opencodex/verification/OpenCodex-*.zip
+            opencodex/verification/OpenCodex-*.tar.gz
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+      - name: Upload runtime evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: OpenCodex-${{ matrix.label }}-verification
+          path: |
+            opencodex/verification/*.json
+            opencodex/verification/*.log
+            opencodex/verification/*.png
+          if-no-files-found: warn
+          retention-days: 14

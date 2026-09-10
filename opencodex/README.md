@@ -65,3 +65,13 @@ bun typecheck
 ```
 
 The build script also runs `--version` for native targets. Cross compilation alone does not verify Windows runtime behavior. Consult the included build report for the exact checks performed on this release.
+
+The `OpenCodex native verification` GitHub Actions workflow builds on Windows and Linux hosts, checks password protection, loads the embedded UI in Chromium, and opens a synthetic project through the directory picker. It saves screenshots and a runtime report; a distribution artifact is uploaded only after those checks pass. No model inference or provider credentials are used. The browser test covers the served workspace, not the operating system's double-click browser launch.
+
+To run the same check after a native build, install `agent-browser@0.37.1` and its browser (`agent-browser install`), then run from `packages/opencode`:
+
+```sh
+bun run ../../opencodex/verify-runtime.ts
+```
+
+Evidence is written to `opencodex/verification/`. When a CI distribution includes `RUNTIME-REPORT.json`, its SHA-256 identifies the executable that was tested.
