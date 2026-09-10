@@ -105,7 +105,7 @@ try {
     ])
     clearTimeout(timeout)
     assert.equal(code, 0, redact(stderr))
-    assert.match(stdout, args[0] === "--version" ? /1\.18\.30-opencodex\.1/ : /OpenCodex/)
+    assert.match(stdout, args[0] === "--version" ? /1\.18\.30-opencodex\.2/ : /OpenCodex/)
     passed(`native ${args[0]}`)
   }
 
@@ -178,7 +178,7 @@ try {
   const dialog = await browser(["snapshot", "-i"])
   assert.match(dialog.snapshot, /Search folders/)
   await browser(["find", "placeholder", "Search folders", "fill", project.replaceAll("\\", "/")])
-  const folderSelector = `[data-directory-path=${JSON.stringify(project.replaceAll("\\", "/"))}]`
+  const folderSelector = `[data-directory-path=${JSON.stringify(project)}]`
   await browser(["wait", folderSelector])
   await browser(["screenshot", path.join(output, "project-picker.png")])
   await browser(["click", folderSelector])

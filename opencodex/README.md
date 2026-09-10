@@ -48,7 +48,7 @@ From the repository root, with Bun 1.3.14 or a compatible newer version:
 
 ```sh
 bun install --frozen-lockfile
-OPENCODE_VERSION=1.18.30-opencodex.1 bun run packages/opencode/script/build.ts --single --opencodex --skip-install
+OPENCODE_VERSION=1.18.30-opencodex.2 bun run packages/opencode/script/build.ts --single --opencodex --skip-install
 ```
 
 The executable is under `packages/opencode/dist/opencode-<platform>/bin/`. Copy it beside the matching launcher and this README. Keep the upstream `LICENSE` with the distribution.

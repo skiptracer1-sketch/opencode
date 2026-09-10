@@ -36,7 +36,11 @@ function toRow(absolute: string, home: string, group: Row["group"]): Row {
   }
 
   const search = Array.from(
-    new Set([full, withSlash(full), tilde, withSlash(tilde), getFilename(full)].filter(Boolean)),
+    new Set(
+      [full, withSlash(full), tilde, withSlash(tilde), getFilename(full)]
+        .flatMap((value) => [value, value.replaceAll("\\", "/")])
+        .filter(Boolean),
+    ),
   ).join("\n")
   return { absolute: full, search, group }
 }
